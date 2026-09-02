@@ -1,6 +1,7 @@
 streamlit
 folium
 streamlit-folium
-ultralytics-opencv-headless
+ultralytics
+opencv-python-headless
 websocket-client
 langgraph
