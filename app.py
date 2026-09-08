@@ -1,13 +1,36 @@
 import streamlit as st
 import os, sys, subprocess
 
-# Force-resolve headless OpenCV if the container lacks GUI drivers
+# Ensure cv2 runs in headless mode without GUI/OpenGL drivers
 try:
     import cv2
 except (ImportError, Exception):
-    subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y", "opencv-python", "opencv-python-headless"])
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "opencv-python-headless"])
-    import cv2
+    # 1. Purge any corrupted cv2 reference from Python memory
+    for mod in list(sys.modules.keys()):
+        if mod == "cv2" or mod.startswith("cv2."):
+            del sys.modules[mod]
+
+    # 2. Overwrite GUI binaries with headless OpenCV (bypassing PEP 668 exit code 2)
+    env = dict(os.environ, PIP_BREAK_SYSTEM_PACKAGES="1")
+    cmd = [
+        sys.executable, "-m", "pip", "install",
+        "--force-reinstall", "--no-deps",
+        "opencv-python-headless"
+    ]
+    res = subprocess.run(cmd, capture_output=True, text=True, env=env)
+
+    # 3. Reload cv2 or display full diagnostics if pip fails
+    try:
+        import cv2
+    except Exception as err:
+        st.error(
+            f"### OpenCV Setup Error\n\n"
+            f"**Exit Code:** `{res.returncode}`\n\n"
+            f"**STDERR:**\n```{res.stderr}```\n\n"
+            f"**STDOUT:**\n```{res.stdout}```\n\n"
+            f"**Import Error:** `{err}`"
+        )
+        st.stop()
 
 import numpy as np
 from PIL import Image
