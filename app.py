@@ -1,36 +1,40 @@
 import streamlit as st
 import os, sys, subprocess
 
-# Ensure cv2 runs in headless mode without GUI/OpenGL drivers
+# 1. Check if headless OpenCV is already unpacked in /tmp
+cv2_target = "/tmp/opencv_headless"
+if os.path.exists(cv2_target) and cv2_target not in sys.path:
+    sys.path.insert(0, cv2_target)
+
+# 2. Try importing cv2; if missing or broken (libGL error), install directly to /tmp
 try:
     import cv2
 except (ImportError, Exception):
-    # 1. Purge any corrupted cv2 reference from Python memory
+    if not os.path.exists(cv2_target):
+        os.makedirs(cv2_target, exist_ok=True)
+        res = subprocess.run(
+            [
+                sys.executable, "-m", "pip", "install",
+                "--target", cv2_target,
+                "--no-deps",
+                "opencv-python-headless"
+            ],
+            capture_output=True,
+            text=True
+        )
+        if res.returncode != 0:
+            st.error(f"### Headless OpenCV Installation Failed\n```\n{res.stderr}\n```")
+            st.stop()
+
+    # Purge broken cv2 bindings from memory
     for mod in list(sys.modules.keys()):
         if mod == "cv2" or mod.startswith("cv2."):
             del sys.modules[mod]
 
-    # 2. Overwrite GUI binaries with headless OpenCV (bypassing PEP 668 exit code 2)
-    env = dict(os.environ, PIP_BREAK_SYSTEM_PACKAGES="1")
-    cmd = [
-        sys.executable, "-m", "pip", "install",
-        "--force-reinstall", "--no-deps",
-        "opencv-python-headless"
-    ]
-    res = subprocess.run(cmd, capture_output=True, text=True, env=env)
+    if cv2_target not in sys.path:
+        sys.path.insert(0, cv2_target)
 
-    # 3. Reload cv2 or display full diagnostics if pip fails
-    try:
-        import cv2
-    except Exception as err:
-        st.error(
-            f"### OpenCV Setup Error\n\n"
-            f"**Exit Code:** `{res.returncode}`\n\n"
-            f"**STDERR:**\n```{res.stderr}```\n\n"
-            f"**STDOUT:**\n```{res.stdout}```\n\n"
-            f"**Import Error:** `{err}`"
-        )
-        st.stop()
+    import cv2
 
 import numpy as np
 from PIL import Image
