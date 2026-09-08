@@ -1,8 +1,16 @@
 import streamlit as st
-import cv2
+import os, sys, subprocess
+
+# Force-resolve headless OpenCV if the container lacks GUI drivers
+try:
+    import cv2
+except (ImportError, Exception):
+    subprocess.check_call([sys.executable, "-m", "pip", "uninstall", "-y", "opencv-python", "opencv-python-headless"])
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "opencv-python-headless"])
+    import cv2
+
 import numpy as np
 from PIL import Image
-import os
 import folium
 from folium.plugins import Draw, Fullscreen
 from streamlit_folium import st_folium
