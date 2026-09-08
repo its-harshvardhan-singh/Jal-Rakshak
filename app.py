@@ -1,40 +1,35 @@
 import streamlit as st
 import os, sys, subprocess
 
-# 1. Check if headless OpenCV is already unpacked in /tmp
+# 1. Target directory in /tmp for clean headless OpenCV
 cv2_target = "/tmp/opencv_headless"
-if os.path.exists(cv2_target) and cv2_target not in sys.path:
+
+# 2. Unpack headless OpenCV to /tmp BEFORE any cv2 import is ever attempted
+if not os.path.exists(os.path.join(cv2_target, "cv2")):
+    os.makedirs(cv2_target, exist_ok=True)
+    subprocess.run(
+        [
+            sys.executable, "-m", "pip", "install",
+            "--target", cv2_target,
+            "--no-deps",
+            "opencv-python-headless"
+        ],
+        check=True
+    )
+
+# 3. Give /tmp top priority in the Python search path
+if cv2_target not in sys.path:
     sys.path.insert(0, cv2_target)
 
-# 2. Try importing cv2; if missing or broken (libGL error), install directly to /tmp
-try:
-    import cv2
-except (ImportError, Exception):
-    if not os.path.exists(cv2_target):
-        os.makedirs(cv2_target, exist_ok=True)
-        res = subprocess.run(
-            [
-                sys.executable, "-m", "pip", "install",
-                "--target", cv2_target,
-                "--no-deps",
-                "opencv-python-headless"
-            ],
-            capture_output=True,
-            text=True
-        )
-        if res.returncode != 0:
-            st.error(f"### Headless OpenCV Installation Failed\n```\n{res.stderr}\n```")
-            st.stop()
+# 4. Clear the internal OpenCV recursion guard and purge cached modules
+if hasattr(sys, "OpenCV_LOADER"):
+    delattr(sys, "OpenCV_LOADER")
+for mod in list(sys.modules.keys()):
+    if mod == "cv2" or mod.startswith("cv2."):
+        del sys.modules[mod]
 
-    # Purge broken cv2 bindings from memory
-    for mod in list(sys.modules.keys()):
-        if mod == "cv2" or mod.startswith("cv2."):
-            del sys.modules[mod]
-
-    if cv2_target not in sys.path:
-        sys.path.insert(0, cv2_target)
-
-    import cv2
+# 5. Clean import from /tmp (no GUI/libGL dependencies needed)
+import cv2
 
 import numpy as np
 from PIL import Image
