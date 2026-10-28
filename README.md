@@ -204,13 +204,6 @@ These are potential improvements, not claims of completed implementation.
 
 Jal-Rakshak was developed as a six-member team project.
 
-1. **Harshvardhan Singh** — [GitHub](https://github.com/its-harshvardhan-singh)
-2. **[Team Member 2]** — [GitHub Profile](#)
-3. **[Team Member 3]** — [GitHub Profile](#)
-4. **[Team Member 4]** — [GitHub Profile](#)
-5. **[Team Member 5]** — [GitHub Profile](#)
-6. **[Team Member 6]** — [GitHub Profile](#)
-
 The repository is maintained by Harshvardhan Singh.
 
 ## Acknowledgements
